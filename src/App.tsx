@@ -23,7 +23,7 @@ function App() {
   }
 
   if (currentView === 'operations') {
-    return <OperationsDashboard />;
+    return <OperationsDashboard onBack={() => setCurrentView('selection')} />;
   }
 
   if (currentView === 'selection') {

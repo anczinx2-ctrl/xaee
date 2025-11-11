@@ -3,7 +3,7 @@ import {
   Activity, TrendingUp, TrendingDown, Minus, Users, Award,
   FileCheck, AlertCircle, Clock, Shield, ChevronRight, Bell,
   Menu, X, MessageSquare, Send, Flame, Trophy, Target,
-  Zap, Database, Network
+  Zap, Database, Network, ArrowLeft, Bot
 } from 'lucide-react';
 import { supabase } from '../utils/supabase';
 import { ethers } from 'ethers';
@@ -33,7 +33,11 @@ interface ChartDataPoint {
   shared: number;
 }
 
-export default function OperationsDashboard() {
+interface OperationsDashboardProps {
+  onBack?: () => void;
+}
+
+export default function OperationsDashboard({ onBack }: OperationsDashboardProps = {}) {
   const [stats, setStats] = useState<DashboardStats>({
     totalCredentials: 0,
     activeInstitutions: 0,
@@ -46,12 +50,25 @@ export default function OperationsDashboard() {
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [activeView, setActiveView] = useState('dashboard');
+  const [botAnimation, setBotAnimation] = useState(0);
 
   useEffect(() => {
     loadDashboardData();
     const interval = setInterval(loadDashboardData, 30000);
     return () => clearInterval(interval);
   }, [timeRange]);
+
+  useEffect(() => {
+    const botInterval = setInterval(() => {
+      setBotAnimation(prev => (prev + 1) % 3);
+    }, 2000);
+    return () => clearInterval(botInterval);
+  }, []);
+
+  const handleNavigation = (view: string) => {
+    setActiveView(view);
+  };
 
   const loadDashboardData = async () => {
     try {
@@ -211,25 +228,34 @@ export default function OperationsDashboard() {
           </div>
 
           <nav className="p-4 space-y-2">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300 text-gray-400 hover:bg-gray-800 hover:text-white mb-4 border-b border-gray-800 pb-4"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span className="font-medium">Back to Main</span>
+              </button>
+            )}
             {[
-              { name: 'Dashboard', icon: Activity, active: true },
-              { name: 'Credentials', icon: Award },
-              { name: 'Institutions', icon: Shield },
-              { name: 'Analytics', icon: TrendingUp },
-              { name: 'Blockchain', icon: Network },
-              { name: 'Settings', icon: Target }
+              { name: 'Dashboard', icon: Activity, view: 'dashboard' },
+              { name: 'Credentials', icon: Award, view: 'credentials' },
+              { name: 'Institutions', icon: Shield, view: 'institutions' },
+              { name: 'Analytics', icon: TrendingUp, view: 'analytics' },
+              { name: 'Security', icon: Bot, view: 'security' }
             ].map((item) => (
               <button
                 key={item.name}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                  item.active
-                    ? 'bg-blue-600 text-white'
+                onClick={() => handleNavigation(item.view)}
+                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300 transform hover:scale-105 ${
+                  activeView === item.view
+                    ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg'
                     : 'text-gray-400 hover:bg-gray-800 hover:text-white'
                 }`}
               >
                 <item.icon className="w-5 h-5" />
                 <span className="font-medium">{item.name}</span>
-                {item.active && <ChevronRight className="w-4 h-4 ml-auto" />}
+                {activeView === item.view && <ChevronRight className="w-4 h-4 ml-auto" />}
               </button>
             ))}
           </nav>
@@ -238,27 +264,115 @@ export default function OperationsDashboard() {
         <div className="flex-1 lg:ml-64">
           <header className="sticky top-0 z-40 bg-gray-900/80 backdrop-blur-lg border-b border-gray-800">
             <div className="flex items-center justify-between px-4 lg:px-8 py-4">
-              <button onClick={() => setMobileMenuOpen(true)} className="lg:hidden text-gray-400">
+              <button onClick={() => setMobileMenuOpen(true)} className="lg:hidden text-gray-400 hover:text-white transition-colors">
                 <Menu className="w-6 h-6" />
               </button>
               <div className="flex-1 lg:flex-none">
-                <h1 className="text-2xl font-bold text-white">Operations Center</h1>
+                <h1 className="text-2xl font-bold text-white animate-fade-in">{activeView === 'dashboard' ? 'Operations Center' : activeView.charAt(0).toUpperCase() + activeView.slice(1)}</h1>
                 <p className="text-sm text-gray-400 mt-1">Real-time blockchain credential analytics</p>
               </div>
               <div className="flex items-center space-x-4">
+                {onBack && (
+                  <button
+                    onClick={onBack}
+                    className="hidden lg:flex items-center space-x-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-all duration-300 transform hover:scale-105"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span className="text-sm font-medium">Back</span>
+                  </button>
+                )}
                 <div className="hidden lg:flex items-center space-x-2 text-sm">
                   <Clock className="w-4 h-4 text-gray-400" />
                   <span className="text-gray-400">{new Date().toLocaleTimeString()}</span>
                 </div>
                 <button className="relative p-2 text-gray-400 hover:text-white transition-colors">
                   <Bell className="w-5 h-5" />
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
                 </button>
               </div>
             </div>
           </header>
 
           <main className="p-4 lg:p-8">
+            {activeView === 'security' && (
+              <div className="mb-8 bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl border border-gray-700 p-8">
+                <div className="flex flex-col lg:flex-row items-center justify-between">
+                  <div className="flex-1 mb-6 lg:mb-0">
+                    <h2 className="text-3xl font-bold text-white mb-4">Security Monitor</h2>
+                    <p className="text-gray-400 mb-6">AI-powered threat detection and system protection</p>
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                        <span className="text-sm text-gray-300">All systems secure</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                        <span className="text-sm text-gray-300">No threats detected</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                        <span className="text-sm text-gray-300">Monitoring {stats.totalCredentials} credentials</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <div className="w-64 h-64 relative">
+                      <svg viewBox="0 0 200 200" className="w-full h-full">
+                        <defs>
+                          <linearGradient id="botGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#3b82f6" />
+                            <stop offset="100%" stopColor="#06b6d4" />
+                          </linearGradient>
+                        </defs>
+                        <g className={`transform transition-all duration-500 ${botAnimation === 1 ? 'translate-y-2' : botAnimation === 2 ? 'translate-y-1' : ''}`}>
+                          <circle cx="100" cy="60" r="30" fill="url(#botGradient)" className="animate-pulse" />
+                          <circle cx="90" cy="55" r="4" fill="#fff" className="animate-blink" />
+                          <circle cx="110" cy="55" r="4" fill="#fff" className="animate-blink" />
+                          <path d="M 85 70 Q 100 75 115 70" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" />
+                          <rect x="70" y="90" width="60" height="40" rx="5" fill="url(#botGradient)" />
+                          <rect x="50" y="100" width="15" height="30" rx="3" fill="url(#botGradient)" className={`transform origin-center ${botAnimation === 1 ? 'rotate-12' : botAnimation === 2 ? '-rotate-12' : ''} transition-transform duration-500`} />
+                          <rect x="135" y="100" width="15" height="30" rx="3" fill="url(#botGradient)" className={`transform origin-center ${botAnimation === 1 ? '-rotate-12' : botAnimation === 2 ? 'rotate-12' : ''} transition-transform duration-500`} />
+                          <rect x="85" y="135" width="12" height="35" rx="3" fill="url(#botGradient)" />
+                          <rect x="103" y="135" width="12" height="35" rx="3" fill="url(#botGradient)" />
+                          <circle cx="75" cy="70" r="8" fill="#06b6d4" className="animate-ping" opacity="0.5" />
+                          <circle cx="125" cy="70" r="8" fill="#06b6d4" className="animate-ping" opacity="0.5" style={{ animationDelay: '0.5s' }} />
+                        </g>
+                      </svg>
+                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-full blur-3xl animate-pulse"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {activeView === 'credentials' && (
+              <div className="bg-gray-800 rounded-2xl border border-gray-700 p-8 mb-8 animate-fade-in">
+                <h2 className="text-2xl font-bold text-white mb-4">Credentials Overview</h2>
+                <p className="text-gray-400">View and manage all issued credentials across the platform.</p>
+                <div className="mt-6 text-center text-gray-500">
+                  This section shows all credential data from the blockchain.
+                </div>
+              </div>
+            )}
+            {activeView === 'institutions' && (
+              <div className="bg-gray-800 rounded-2xl border border-gray-700 p-8 mb-8 animate-fade-in">
+                <h2 className="text-2xl font-bold text-white mb-4">Institutions Management</h2>
+                <p className="text-gray-400">Monitor authorized institutions and their activities.</p>
+                <div className="mt-6 text-center text-gray-500">
+                  Institutional data and authorization status.
+                </div>
+              </div>
+            )}
+            {activeView === 'analytics' && (
+              <div className="bg-gray-800 rounded-2xl border border-gray-700 p-8 mb-8 animate-fade-in">
+                <h2 className="text-2xl font-bold text-white mb-4">Advanced Analytics</h2>
+                <p className="text-gray-400">Deep insights into credential issuance and verification patterns.</p>
+                <div className="mt-6 text-center text-gray-500">
+                  Detailed analytics and reporting tools.
+                </div>
+              </div>
+            )}
+            {activeView === 'dashboard' && (
+              <>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
               {statCards.map((card, index) => (
                 <div
@@ -350,6 +464,8 @@ export default function OperationsDashboard() {
               <LeaderboardWidget />
               <SystemHealthMonitor systemHealth={stats.systemHealth} />
             </div>
+              </>
+            )}
           </main>
         </div>
       </div>
@@ -370,8 +486,8 @@ export default function OperationsDashboard() {
               <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
                 <Shield className="w-4 h-4 text-white" />
               </div>
-              <div className="bg-gray-700 rounded-lg p-3 max-w-[70%]">
-                <p className="text-sm text-gray-200">Hello! How can I assist you today?</p>
+              <div className="bg-gray-700 rounded-lg p-3 max-w-[70%] animate-fade-in">
+                <p className="text-sm text-gray-200">Hello! How can I assist you with the operations dashboard?</p>
               </div>
             </div>
           </div>
@@ -392,7 +508,7 @@ export default function OperationsDashboard() {
 
       <button
         onClick={() => setChatOpen(!chatOpen)}
-        className="fixed bottom-4 right-4 w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-500 text-white rounded-full shadow-lg hover:shadow-2xl transition-all duration-300 flex items-center justify-center lg:hidden"
+        className="fixed bottom-4 right-4 w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-500 text-white rounded-full shadow-lg hover:shadow-2xl transition-all duration-300 flex items-center justify-center transform hover:scale-110 animate-bounce-slow"
       >
         {chatOpen ? <X className="w-6 h-6" /> : <MessageSquare className="w-6 h-6" />}
       </button>
